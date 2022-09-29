@@ -1,0 +1,88 @@
+{
+    "tracks": {
+        "href": "https://api.spotify.com/v1/search?query=track%3A%22Hello%22artist%3A%22Adele%22&type=track&market=US&offset=0&limit=1",
+        "items": [
+            {
+                "album": {
+                    "album_type": "album",
+                    "artists": [
+                        {
+                            "external_urls": {
+                                "spotify": "https://open.spotify.com/artist/4dpARuHxo51G3z768sgnrY"
+                            },
+                            "href": "https://api.spotify.com/v1/artists/4dpARuHxo51G3z768sgnrY",
+                            "id": "4dpARuHxo51G3z768sgnrY",
+                            "name": "Adele",
+                            "type": "artist",
+                            "uri": "spotify:artist:4dpARuHxo51G3z768sgnrY"
+                        }
+                    ],
+                    "external_urls": {
+                        "spotify": "https://open.spotify.com/album/3AvPX1B1HiFROvYjLb5Qwi"
+                    },
+                    "href": "https://api.spotify.com/v1/albums/3AvPX1B1HiFROvYjLb5Qwi",
+                    "id": "3AvPX1B1HiFROvYjLb5Qwi",
+                    "images": [
+                        {
+                            "height": 640,
+                            "url": "https://i.scdn.co/image/ab67616d0000b2732e88d7f65e6bea2a05202c14",
+                            "width": 640
+                        },
+                        {
+                            "height": 300,
+                            "url": "https://i.scdn.co/image/ab67616d00001e022e88d7f65e6bea2a05202c14",
+                            "width": 300
+                        },
+                        {
+                            "height": 64,
+                            "url": "https://i.scdn.co/image/ab67616d000048512e88d7f65e6bea2a05202c14",
+                            "width": 64
+                        }
+                    ],
+                    "name": "25",
+                    "release_date": "2015-11-20",
+                    "release_date_precision": "day",
+                    "total_tracks": 11,
+                    "type": "album",
+                    "uri": "spotify:album:3AvPX1B1HiFROvYjLb5Qwi"
+                },
+                "artists": [
+                    {
+                        "external_urls": {
+                            "spotify": "https://open.spotify.com/artist/4dpARuHxo51G3z768sgnrY"
+                        },
+                        "href": "https://api.spotify.com/v1/artists/4dpARuHxo51G3z768sgnrY",
+                        "id": "4dpARuHxo51G3z768sgnrY",
+                        "name": "Adele",
+                        "type": "artist",
+                        "uri": "spotify:artist:4dpARuHxo51G3z768sgnrY"
+                    }
+                ],
+                "disc_number": 1,
+                "duration_ms": 295502,
+                "explicit": false,
+                "external_ids": {
+                    "isrc": "GBBKS1500214"
+                },
+                "external_urls": {
+                    "spotify": "https://open.spotify.com/track/62PaSfnXSMyLshYJrlTuL3"
+                },
+                "href": "https://api.spotify.com/v1/tracks/62PaSfnXSMyLshYJrlTuL3",
+                "id": "62PaSfnXSMyLshYJrlTuL3",
+                "is_local": false,
+                "is_playable": true,
+                "name": "Hello",
+                "popularity": 73,
+                "preview_url": "https://p.scdn.co/mp3-preview/c9e07a3179cae95f703580aa53325ec73781ddff?cid=ba0c189dabbb4c4d9ee175011ebb9231",
+                "track_number": 1,
+                "type": "track",
+                "uri": "spotify:track:62PaSfnXSMyLshYJrlTuL3"
+            }
+        ],
+        "limit": 1,
+        "next": "https://api.spotify.com/v1/search?query=track%3A%22Hello%22artist%3A%22Adele%22&type=track&market=US&offset=1&limit=1",
+        "offset": 0,
+        "previous": null,
+        "total": 17
+    }
+}
