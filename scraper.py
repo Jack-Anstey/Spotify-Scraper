@@ -24,9 +24,9 @@ def getLyrics(artist, track):
     lyrics1 = html.find("div", class_="lyrics")
     lyrics2 = html.find("div", class_="Lyrics__Container-sc-1ynbvzw-6 YYrds")
     if lyrics1:
-        lyrics = lyrics1.get_text()
+        lyrics = lyrics1.get_text(separator="\n")
     elif lyrics2:
-        lyrics = lyrics2.get_text()
+        lyrics = lyrics2.get_text(separator="\n")
     elif lyrics1 == lyrics2 == None:
         lyrics = None
     return lyrics
