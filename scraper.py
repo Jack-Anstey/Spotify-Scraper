@@ -60,8 +60,9 @@ def main():
     trackID = getTrackID(spotify, artist, track)
     lyrics = getLyrics(artist, track)
     features = getAudioFeatures(spotify, trackID)
-
-    features['lyrics'] =  str(lyrics)
+    lyricsFixed = lyrics.replace("\n", "\\n")
+    
+    features['lyrics'] = lyricsFixed
     features['artist'] = artist
     features['song'] = track
     features['trackID'] = trackID
