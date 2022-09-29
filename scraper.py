@@ -4,16 +4,29 @@ import secrets
 import json
 from bs4 import BeautifulSoup
 import requests
+import pandas as pd
 
-def getSpotifyJson(spotify, artist, track):
+def getTrackID(spotify, artist, track):
     q = "track:\"%s\"artist:\"%s\"" % (track, artist)
-    # print(q)
     result = spotify.search(q, limit=1, offset=0, type='track', market='US')
-    file = json.dumps(result, indent=4)
 
-    # Write JSON
-    with open("jsons/"+artist+track+".json", "w") as outfile:
-        outfile.write(file)
+    # file = json.dumps(result, indent=4)
+
+    # # Write JSON
+    # with open("jsons/"+artist+track+".json", "w") as outfile:
+    #     outfile.write(file)
+
+    return result['tracks']['items'][0]['id']  # returns the trackID
+
+def getAudioFeatures(spotify, trackID):
+    result = spotify.audio_features([trackID])[0]
+
+    return {'danceability': result['danceability'], 'energy': result['energy'], 'key': result['key'], 
+    'loudness': result['loudness'], 'mode': result['mode'], 'speechiness': result['speechiness'], 
+    'acousticness': result['acousticness'], 'instrumentalness': result['instrumentalness'], 
+    'liveness': result['liveness'], 'valence': result['valence'], 'tempo': result['tempo'], 
+    'time_signature': result['time_signature'], 'duration_ms': result['duration_ms']}
+
 
 def getLyrics(artist, track):
     artist = str(artist.replace(' ','-')) if ' ' in artist else str(artist)
@@ -31,14 +44,30 @@ def getLyrics(artist, track):
         lyrics = None
     return lyrics
 
+def dfToCsv(df):
+    df.to_csv('output.csv', index=False)  
+
 def main():
     auth_manager = SpotifyClientCredentials(client_id=secrets.SPOTIPY_CLIENT_ID, client_secret=secrets.SPOTIPY_CLIENT_SECRET)
     spotify = sp.Spotify(auth_manager=auth_manager)
+    
+    results = pd.DataFrame(columns=['song', 'artist', 'trackID', 'danceability', 'energy', 'key', 'loudness',
+    'mode', 'speechiness', 'acousticness', 'instrumentalness', 'liveness', 'valence', 'tempo', 'time_signature', 'duration_ms', 'lyrics'])
+
     artist = "Adele"
     track = "Easy On Me"
-    getSpotifyJson(spotify, artist, track)
+
+    trackID = getTrackID(spotify, artist, track)
     lyrics = getLyrics(artist, track)
-    print(lyrics)
+    features = getAudioFeatures(spotify, trackID)
+
+    features['lyrics'] =  str(lyrics)
+    features['artist'] = artist
+    features['song'] = track
+    features['trackID'] = trackID
+
+    results = results.append(pd.Series(features), ignore_index=True)
+    dfToCsv(results)
 
 if __name__ == "__main__":
     main()
