@@ -8,4 +8,4 @@ Utilizing the Spotify API, an song artist pair get's the associated track ID, wh
 
 ## How To Use
 
-Have a .csv in the same folder as this code entiled `output.csv` with the same columns labled `song` and `artist` respectively. Input your `SPOTIPY_CLIENT_ID` and `SPOTIPY_CLIENT_SECRET` in `secrets.py`, and then run! A file `output.csv` will be created when finished that will contain tons of interesting information about the songs that you requested.
+Have a .csv in the same folder as this code entiled `input.csv` with the same columns labled `song` and `artist` respectively. Input your `SPOTIPY_CLIENT_ID` and `SPOTIPY_CLIENT_SECRET` in `secrets.py`, and then run! A file `output.csv` will be created when finished that will contain tons of interesting information about the songs that you requested.
