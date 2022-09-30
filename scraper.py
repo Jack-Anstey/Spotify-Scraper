@@ -12,11 +12,12 @@ def getTrackFeatures(spotify, artist, track):
     result = spotify.search(q, limit=1, offset=0, type='track', market='US')
 
     try:
-        return {'track_id': result['tracks']['items'][0]['id'], 'popularity': result['tracks']['items'][0]['popularity'],
+        return {'song': result['tracks']['items'][0]['name'], 'artist': result['tracks']['items'][0]['artists'][0]['name'], 
+            'track_id': result['tracks']['items'][0]['id'], 'popularity': result['tracks']['items'][0]['popularity'],
             'release_date': result['tracks']['items'][0]['album']['release_date'], 
             'release_date_precision': result['tracks']['items'][0]['album']['release_date_precision']}  # returns a dictionary
     except Exception as e:
-        print("Exception " + str(e) + " with the artist: " + str(artist) + " and the song: " + str(track))
+        print("Exception " + str(e) + " with the artist input: " + str(artist) + " and the song input: " + str(track))
         return None
 
 def getAudioFeatures(spotify, trackID):
@@ -30,8 +31,21 @@ def getAudioFeatures(spotify, trackID):
 
 
 def getLyrics(artist, track):
+
+    # do some string formatting for genius
+    artist = artist.replace(",", "")
+    artist = artist.replace(".", "")
+    artist = artist.replace("\"", "")
+    artist = artist.replace("&", "and")
+    artist = artist.replace("+", "")
     artist = str(artist.replace(' ','-')) if ' ' in artist else str(artist)
+
+    track = track.replace(",", "")
+    track = track.replace(".", "")
+    track = track.replace("\"", "")
+    track = track.replace("+", "")
     track = str(track.replace(' ','-')) if ' ' in track else str(track)
+
     page = requests.get('https://genius.com/'+ artist + '-' + track + '-' + 'lyrics')
     print("Page:", page)
     html = BeautifulSoup(page.text, 'html.parser')
@@ -61,11 +75,13 @@ def generateOutput(csvName, spotify):
         artist = tuple[2]
         track = tuple[1]
 
-        features.update({'artist': artist, 'song': track})
+        # features.update({'artist': artist, 'song': track})
         trackFeatures = getTrackFeatures(spotify, artist, track)
         if trackFeatures != None:
-            features.update(getTrackFeatures(spotify, artist, track))
+            features.update(trackFeatures)
             features.update(getAudioFeatures(spotify, features['track_id']))
+            # artist = features['artist']
+            # track = features['song']
 
         lyrics = getLyrics(artist, track)
         if lyrics != None:
@@ -74,14 +90,12 @@ def generateOutput(csvName, spotify):
 
         results = results.append(pd.Series(features), ignore_index=True)
 
-        if index > 2:
+        if index > 10:
             break
         else:
             index += 1
 
     dfToCsv(results)
-
-
 
 def main():
     auth_manager = SpotifyClientCredentials(client_id=secrets.SPOTIPY_CLIENT_ID, client_secret=secrets.SPOTIPY_CLIENT_SECRET)
