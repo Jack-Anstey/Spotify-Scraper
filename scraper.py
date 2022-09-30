@@ -12,12 +12,19 @@ def getTrackFeatures(spotify, artist, track):
     result = spotify.search(q, limit=1, offset=0, type='track', market='US')
 
     try:
+        totalArtists = len(result['tracks']['items'][0]['artists'])
+        featuredArtists = ""
+        for features in range(1, totalArtists):
+            featuredArtists += result['tracks']['items'][0]['artists'][features]['name'] + ","
+            if features == totalArtists-1:
+                featuredArtists = featuredArtists[:-1]  # get rid of the extra comma at the end
+
         return {'song': result['tracks']['items'][0]['name'], 'artist': result['tracks']['items'][0]['artists'][0]['name'], 
-            'track_id': result['tracks']['items'][0]['id'], 'popularity': result['tracks']['items'][0]['popularity'],
+            'features': featuredArtists, 'track_id': result['tracks']['items'][0]['id'], 'popularity': result['tracks']['items'][0]['popularity'],
             'release_date': result['tracks']['items'][0]['album']['release_date'], 
             'release_date_precision': result['tracks']['items'][0]['album']['release_date_precision']}  # returns a dictionary
     except Exception as e:
-        print("Exception " + str(e) + " with the artist input: " + str(artist) + " and the song input: " + str(track))
+        print("Exception \"" + str(e) + "\" with the artist input: " + str(artist) + " and the song input: " + str(track))
         return None
 
 def getAudioFeatures(spotify, trackID):
@@ -63,7 +70,7 @@ def dfToCsv(df):
     df.to_csv('output.csv', index=False)
 
 def generateOutput(csvName, spotify):
-    results = pd.DataFrame(columns=['song', 'artist', 'track_id', 'popularity', 'release_date', 'release_date_precision', 'danceability', 'energy', 'key', 'loudness',
+    results = pd.DataFrame(columns=['song', 'artist', 'features', 'track_id', 'popularity', 'release_date', 'release_date_precision', 'danceability', 'energy', 'key', 'loudness',
     'mode', 'speechiness', 'acousticness', 'instrumentalness', 'liveness', 'valence', 'tempo', 'time_signature', 'duration_ms', 'lyrics'])
 
     input = pd.read_csv(csvName)
