@@ -6,17 +6,14 @@ from bs4 import BeautifulSoup
 import requests
 import pandas as pd
 
-def getTrackID(spotify, artist, track):
+def getTrackFeatures(spotify, artist, track):
     q = "track:\"%s\"artist:\"%s\"" % (track, artist)
+    print(q)
     result = spotify.search(q, limit=1, offset=0, type='track', market='US')
 
-    # file = json.dumps(result, indent=4)
-
-    # # Write JSON
-    # with open("jsons/"+artist+track+".json", "w") as outfile:
-    #     outfile.write(file)
-
-    return result['tracks']['items'][0]['id']  # returns the trackID
+    return {'track_id': result['tracks']['items'][0]['id'], 'popularity': result['tracks']['items'][0]['popularity'],
+    'release_date': result['tracks']['items'][0]['album']['release_date'], 
+    'release_date_precision': result['tracks']['items'][0]['album']['release_date_precision']}  # returns a dictionary
 
 def getAudioFeatures(spotify, trackID):
     result = spotify.audio_features([trackID])[0]
@@ -51,21 +48,19 @@ def main():
     auth_manager = SpotifyClientCredentials(client_id=secrets.SPOTIPY_CLIENT_ID, client_secret=secrets.SPOTIPY_CLIENT_SECRET)
     spotify = sp.Spotify(auth_manager=auth_manager)
     
-    results = pd.DataFrame(columns=['song', 'artist', 'trackID', 'danceability', 'energy', 'key', 'loudness',
+    results = pd.DataFrame(columns=['song', 'artist', 'track_id', 'popularity', 'release_date', 'release_date_precision', 'danceability', 'energy', 'key', 'loudness',
     'mode', 'speechiness', 'acousticness', 'instrumentalness', 'liveness', 'valence', 'tempo', 'time_signature', 'duration_ms', 'lyrics'])
 
     artist = "Adele"
     track = "Easy On Me"
+    features = {'artist': artist, 'song': track}
 
-    trackID = getTrackID(spotify, artist, track)
+    features.update(getTrackFeatures(spotify, artist, track))
+    features.update(getAudioFeatures(spotify, features['track_id']))
+
     lyrics = getLyrics(artist, track)
-    features = getAudioFeatures(spotify, trackID)
     lyricsFixed = lyrics.replace("\n", "\\n")
-    
     features['lyrics'] = lyricsFixed
-    features['artist'] = artist
-    features['song'] = track
-    features['trackID'] = trackID
 
     results = results.append(pd.Series(features), ignore_index=True)
     dfToCsv(results)
