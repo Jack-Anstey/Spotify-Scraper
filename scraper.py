@@ -8,12 +8,16 @@ import pandas as pd
 
 def getTrackFeatures(spotify, artist, track):
     q = "track:\"%s\"artist:\"%s\"" % (track, artist)
-    print(q)
+
     result = spotify.search(q, limit=1, offset=0, type='track', market='US')
 
-    return {'track_id': result['tracks']['items'][0]['id'], 'popularity': result['tracks']['items'][0]['popularity'],
-    'release_date': result['tracks']['items'][0]['album']['release_date'], 
-    'release_date_precision': result['tracks']['items'][0]['album']['release_date_precision']}  # returns a dictionary
+    try:
+        return {'track_id': result['tracks']['items'][0]['id'], 'popularity': result['tracks']['items'][0]['popularity'],
+            'release_date': result['tracks']['items'][0]['album']['release_date'], 
+            'release_date_precision': result['tracks']['items'][0]['album']['release_date_precision']}  # returns a dictionary
+    except Exception as e:
+        print("Exception " + str(e) + " with the artist: " + str(artist) + " and the song: " + str(track))
+        return None
 
 def getAudioFeatures(spotify, trackID):
     result = spotify.audio_features([trackID])[0]
@@ -42,28 +46,48 @@ def getLyrics(artist, track):
     return lyrics
 
 def dfToCsv(df):
-    df.to_csv('output.csv', index=False)  
+    df.to_csv('output.csv', index=False)
+
+def generateOutput(csvName, spotify):
+    results = pd.DataFrame(columns=['song', 'artist', 'track_id', 'popularity', 'release_date', 'release_date_precision', 'danceability', 'energy', 'key', 'loudness',
+    'mode', 'speechiness', 'acousticness', 'instrumentalness', 'liveness', 'valence', 'tempo', 'time_signature', 'duration_ms', 'lyrics'])
+
+    input = pd.read_csv(csvName)
+
+    index = 0
+
+    for tuple in input.itertuples():
+        features = dict()
+        artist = tuple[2]
+        track = tuple[1]
+
+        features.update({'artist': artist, 'song': track})
+        trackFeatures = getTrackFeatures(spotify, artist, track)
+        if trackFeatures != None:
+            features.update(getTrackFeatures(spotify, artist, track))
+            features.update(getAudioFeatures(spotify, features['track_id']))
+
+        lyrics = getLyrics(artist, track)
+        if lyrics != None:
+            lyricsFixed = lyrics.replace("\n", "\\n")
+            features['lyrics'] = lyricsFixed
+
+        results = results.append(pd.Series(features), ignore_index=True)
+
+        if index > 2:
+            break
+        else:
+            index += 1
+
+    dfToCsv(results)
+
+
 
 def main():
     auth_manager = SpotifyClientCredentials(client_id=secrets.SPOTIPY_CLIENT_ID, client_secret=secrets.SPOTIPY_CLIENT_SECRET)
     spotify = sp.Spotify(auth_manager=auth_manager)
     
-    results = pd.DataFrame(columns=['song', 'artist', 'track_id', 'popularity', 'release_date', 'release_date_precision', 'danceability', 'energy', 'key', 'loudness',
-    'mode', 'speechiness', 'acousticness', 'instrumentalness', 'liveness', 'valence', 'tempo', 'time_signature', 'duration_ms', 'lyrics'])
-
-    artist = "Adele"
-    track = "Easy On Me"
-    features = {'artist': artist, 'song': track}
-
-    features.update(getTrackFeatures(spotify, artist, track))
-    features.update(getAudioFeatures(spotify, features['track_id']))
-
-    lyrics = getLyrics(artist, track)
-    lyricsFixed = lyrics.replace("\n", "\\n")
-    features['lyrics'] = lyricsFixed
-
-    results = results.append(pd.Series(features), ignore_index=True)
-    dfToCsv(results)
+    generateOutput('input.csv', spotify)
 
 if __name__ == "__main__":
     main()
