@@ -1,3 +1,4 @@
+from sre_constants import SUCCESS
 import spotipy as sp
 from spotipy.oauth2 import SpotifyClientCredentials
 import secrets
@@ -23,25 +24,29 @@ def getTrackFeatures(spotify: sp.Spotify, artist: str, track: str, queryType: st
         q = "track:%s artist:%s" % (track, artist)
     elif queryType == "short":
          q = "track:%s" % (track)
+    success = False
+    while(not success):
+        try:
+            result = spotify.search(q, limit=1, offset=0, type='track', market='US')  # use the query
+            totalArtists = len(result['tracks']['items'][0]['artists'])
+            featuredArtists = ""
+            for features in range(1, totalArtists):
+                featuredArtists += result['tracks']['items'][0]['artists'][features]['name'] + ","
+                if features == totalArtists-1:
+                    featuredArtists = featuredArtists[:-1]  # get rid of the extra comma at the end
+            success = True
 
-    result = spotify.search(q, limit=1, offset=0, type='track', market='US')  # use the query
-
-    try:
-        totalArtists = len(result['tracks']['items'][0]['artists'])
-        featuredArtists = ""
-        for features in range(1, totalArtists):
-            featuredArtists += result['tracks']['items'][0]['artists'][features]['name'] + ","
-            if features == totalArtists-1:
-                featuredArtists = featuredArtists[:-1]  # get rid of the extra comma at the end
-
-        return {'song': result['tracks']['items'][0]['name'], 'artist': result['tracks']['items'][0]['artists'][0]['name'], 
-            'features': featuredArtists, 'track_id': result['tracks']['items'][0]['id'], 'popularity': result['tracks']['items'][0]['popularity'],
-            'release_date': result['tracks']['items'][0]['album']['release_date'], 
-            'release_date_precision': result['tracks']['items'][0]['album']['release_date_precision']}  # returns a dictionary
-    except Exception as e:  # if spotify returned basically nothing, print what happened
-        print("Exception \"" + str(e) + "\" with the artist input: \"" + str(artist) + "\" and the song input: \"" + str(track) + "\"", end="")
-        print(" with the query: \"" + q + "\"")
-        return None
+            return {'song': result['tracks']['items'][0]['name'], 'artist': result['tracks']['items'][0]['artists'][0]['name'], 
+                'features': featuredArtists, 'track_id': result['tracks']['items'][0]['id'], 'popularity': result['tracks']['items'][0]['popularity'],
+                'release_date': result['tracks']['items'][0]['album']['release_date'], 
+                'release_date_precision': result['tracks']['items'][0]['album']['release_date_precision']}  # returns a dictionary
+        except requests.exceptions.Timeout:
+            print("Timed out. Trying again")
+        except Exception as e:  # if spotify returned basically nothing, print what happened
+            print("Exception \"" + str(e) + "\" with the artist input: \"" + str(artist) + "\" and the song input: \"" + str(track) + "\"", end="")
+            print(" with the query: \"" + q + "\"")
+            success = True
+            return None
 
 def getAudioFeatures(spotify: sp.Spotify, trackID: str) -> dict:
     """Get a bunch more data about a particular song from Spotify
@@ -53,8 +58,13 @@ def getAudioFeatures(spotify: sp.Spotify, trackID: str) -> dict:
     Returns:
         dict: a dictionary of the results from Spotify, None if nothing was found
     """
-
-    result = spotify.audio_features([trackID])[0]  # get the track features
+    success = False
+    while(not success):
+        try:
+            result = spotify.audio_features([trackID])[0]  # get the track features
+            success = True
+        except requests.exceptions.Timeout:
+            print("Timed out. Trying again")
 
     try:
         return {'danceability': result['danceability'], 'energy': result['energy'], 'key': result['key'], 
@@ -79,11 +89,14 @@ def getLyrics(artist: str, track: str) -> str:
     """
 
     # do some string formatting for genius
-    artist = artist.translate(artist.maketrans("", "", "',.\"&+':()^$#@_{=}|\\`~/<>;*?"))
+    artist = artist.translate(artist.maketrans("", "", "',.\"&+':()^#@_{=}|\\`~/<>;*?"))
     artist = str(artist.replace(' ','-')) if ' ' in artist else str(artist)
-
-    track = track.translate(track.maketrans("", "", "',.\"&+':()^$#@_{=}|\\`~/<>;*?"))
+    artist = artist.replace("$", "-").replace("!", "-").replace("--", "-")  # replace with a dash instead of nothing
+   
+    track = track.translate(track.maketrans("", "", "',.\"&+':()^#@_{=}|\\`~/<>;*?"))
     track = str(track.replace(' ','-')) if ' ' in track else str(track)
+    track = track.replace("$", "-").replace("!", "-").replace("--", "-")  # replace with a dash instead of nothing
+    
 
     # build the page
     page = requests.get('https://genius.com/'+ artist + '-' + track + '-' + 'lyrics')
@@ -128,8 +141,6 @@ def generateOutput(csvName: str, spotify: sp.Spotify) -> None:
 
     input = pd.read_csv(csvName)  # get the (song, artist) tuples to use as input for getting more data
 
-    index = 0  # debugging
-
     for tuple in input.itertuples():
         features = dict()  # make an empty dictionary
         artist = tuple[2]
@@ -138,12 +149,16 @@ def generateOutput(csvName: str, spotify: sp.Spotify) -> None:
         trackFeatures = getTrackFeatures(spotify, artist, track, "long")
         if trackFeatures != None:
             features.update(trackFeatures)  # add to the dictionary
-            features.update(getAudioFeatures(spotify, features['track_id']))  # add more!
+            audioFeatures = getAudioFeatures(spotify, features['track_id'])
+            if audioFeatures != None:
+                features.update(audioFeatures)  # add more!
         else:  # if an exception is thrown, use the regular artist and song titles
             trackFeatures = getTrackFeatures(spotify, artist, track, "short")
             if trackFeatures != None:
                 features.update(trackFeatures)
-                features.update(getAudioFeatures(spotify, features['track_id']))
+                audioFeatures = getAudioFeatures(spotify, features['track_id'])
+                if audioFeatures != None:
+                    features.update(audioFeatures)  # add more!
             else:  # if we still can't find anything, use the artist and track names that we already have
                 features.update({'artist': artist, 'song': track})
 
@@ -160,12 +175,6 @@ def generateOutput(csvName: str, spotify: sp.Spotify) -> None:
 
         # add to the dataframe
         results = results.append(pd.Series(features), ignore_index=True)
-
-        # debugging
-        if index > 50:
-            break
-        else:
-            index += 1
 
     # output the finished dataframe to output.csv
     dfToCsv(results)
