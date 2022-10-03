@@ -118,21 +118,23 @@ def getLyrics(artist: str, track: str) -> str:
         lyrics = None
     return lyrics
 
-def dfToCsv(df: pd.DataFrame) -> None:
-    """_summary_
+def dfToCsv(df: pd.DataFrame, filename: str) -> None:
+    """Output a given df to a csv with a given filename
 
     Args:
-        df (pd.DataFrame): _description_
+        df (pd.DataFrame): the data that you want put into a csv
+        filename (str): the name of the file (the parameter must include .csv at the end)
     """
 
-    df.to_csv('output.csv', index=False)
+    df.to_csv(filename, index=False)
 
-def generateOutput(csvName: str, spotify: sp.Spotify) -> None:
-    """_summary_
+def generateOutput(csvName: str, spotify: sp.Spotify, chunksize: int) -> None:
+    """Take the songs and artist pairs that you want more information on, and find the information! Outputs to a csv intermittently. 
 
     Args:
-        csvName (str): _description_
-        spotify (sp.Spotify): _description_
+        csvName (str): the name of the csv that you are getting the song and artist names from
+        spotify (sp.Spotify): the Spotify object that interfaces with the Spotify API
+        chunksize (int): the size of the csv chunks that you want
     """
 
     # construct a dataframe with all the columns we'll ever need
@@ -140,6 +142,8 @@ def generateOutput(csvName: str, spotify: sp.Spotify) -> None:
     'mode', 'speechiness', 'acousticness', 'instrumentalness', 'liveness', 'valence', 'tempo', 'time_signature', 'duration_ms', 'lyrics'])
 
     input = pd.read_csv(csvName)  # get the (song, artist) tuples to use as input for getting more data
+    count = 0  # keeps track of how many songs you have looked at in this chunk
+    iteration = 0  # keeps track of how many chunks you have made
 
     for tuple in input.itertuples():
         features = dict()  # make an empty dictionary
@@ -173,17 +177,29 @@ def generateOutput(csvName: str, spotify: sp.Spotify) -> None:
                 lyricsFixed = lyrics.replace("\n", "\\n")
                 features['lyrics'] = lyricsFixed
 
-        # add to the dataframe
-        results = results.append(pd.Series(features), ignore_index=True)
+        if count < chunksize:
+            # add to the dataframe
+            results = results.append(pd.Series(features), ignore_index=True)
+            count += 1
+        else:
+            count = 0
+            dfToCsv(results, "output"+str(iteration)+".csv")
+            # get an empty dataframe
+            results = pd.DataFrame(columns=['song', 'artist', 'features', 'track_id', 'popularity', 'release_date', 'release_date_precision', 'danceability', 'energy', 'key', 'loudness',
+                'mode', 'speechiness', 'acousticness', 'instrumentalness', 'liveness', 'valence', 'tempo', 'time_signature', 'duration_ms', 'lyrics'])
+            iteration += 1
 
-    # output the finished dataframe to output.csv
-    dfToCsv(results)
+    # output the remaining/finished dataframe to output.csv
+    if iteration == 0:
+        dfToCsv(results, "output.csv")
+    else:
+        dfToCsv(results, "output"+str(iteration)+".csv")
 
 def main():
     auth_manager = SpotifyClientCredentials(client_id=secrets.SPOTIPY_CLIENT_ID, client_secret=secrets.SPOTIPY_CLIENT_SECRET)
     spotify = sp.Spotify(auth_manager=auth_manager)
     
-    generateOutput('input.csv', spotify)
+    generateOutput('input.csv', spotify, 3000)  # use a default chunksize of 3000
 
 if __name__ == "__main__":
     main()
