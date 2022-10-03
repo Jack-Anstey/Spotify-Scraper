@@ -198,7 +198,7 @@ def main():
     auth_manager = SpotifyClientCredentials(client_id=secrets.SPOTIPY_CLIENT_ID, client_secret=secrets.SPOTIPY_CLIENT_SECRET)
     spotify = sp.Spotify(auth_manager=auth_manager)
     
-    generateOutput('input.csv', spotify, 100)  # use a default chunksize of 3000
+    generateOutput('input.csv', spotify, 3000)  # use a default chunksize of 3000
 
 if __name__ == "__main__":
     main()
