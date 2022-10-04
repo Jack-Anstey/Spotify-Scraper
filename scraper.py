@@ -19,15 +19,16 @@ def getTrackFeatures(spotify: sp.Spotify, artist: str, track: str) -> dict:
         dict: A dictionary of the results, None if nothing was found
     """
 
-    # remove all punctuation for queries
-    track = track.translate(str.maketrans('', '', string.punctuation))
-    artist = artist.translate(str.maketrans('', '', string.punctuation))
+    # remove apostrophies since that's the only thing that breaks stuff aparently
+    track = track.replace("'", "")
+    artist = artist.replace("'", "")
 
     q = "track:%s artist:%s" % (track, artist)  # make the query
     
     success = False  # keep trying if you timeout
     while(not success):
         try:
+            # Set the limit to 2. Why? Ask Spotify. Returns more consistent results
             result = spotify.search(q, limit=1, offset=0, type='track', market='US')  # use the query
             totalArtists = len(result['tracks']['items'][0]['artists'])
             featuredArtists = ""
@@ -119,7 +120,6 @@ def formatWord(input: str, spaceInterior: bool) -> str:
         spaceInterior (bool): True if you want punctuation inside a word to be a space, 
                                 False otherwise
 
-
     Returns:
         str: the formatted output
     """
@@ -133,11 +133,11 @@ def formatWord(input: str, spaceInterior: bool) -> str:
                 fixedArtistWords.append(word[0].translate(str.maketrans('', '', string.punctuation)) + word[1:len(word)-1] + word[len(word)-1].translate(str.maketrans('', '', string.punctuation)))
 
         output = ' '.join(fixedArtistWords).replace("  ", " ")  #  make the edited array back into one string
-        output = output.translate(str.maketrans(string.punctuation, '-'*len(string.punctuation)))  # any remaining puncuation then turns into a dash
+        output = output.strip().translate(str.maketrans(string.punctuation, '-'*len(string.punctuation)))  # any remaining puncuation then turns into a dash
     else:
         output = input.translate(str.maketrans('', '', string.punctuation))
 
-    output = output.replace(" ", "-").replace("--", "-")  # replace any double dashes with a single dash
+    output = output.strip().replace(" ", "-").replace("--", "-")  # replace any double dashes with a single dash
     return output
 
 def bruteForceGetLyrics(artist: str, track: str) -> str:
