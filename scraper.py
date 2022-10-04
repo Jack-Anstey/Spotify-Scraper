@@ -19,7 +19,7 @@ def getTrackFeatures(spotify: sp.Spotify, artist: str, track: str) -> dict:
         dict: A dictionary of the results, None if nothing was found
     """
 
-    # remove all puncuation for queries
+    # remove all punctuation for queries
     track = track.translate(str.maketrans('', '', string.punctuation))
     artist = artist.translate(str.maketrans('', '', string.punctuation))
 
@@ -149,6 +149,7 @@ def bruteForceGetLyrics(artist: str, track: str) -> str:
     Returns:
         str: the lyrics if found, None otherwise
     """
+    
     # do some string formatting for genius
     lyrics = getLyricsWebScrape(formatWord(artist, True), formatWord(track, False))
     if lyrics == None:
@@ -166,7 +167,7 @@ def dfToCsv(df: pd.DataFrame, filename: str) -> None:
     df.to_csv(filename, index=False)
 
 def getSongData(spotify: sp.Spotify, artist: str, track: str) -> dict():
-    """Find out data bout 
+    """Find out data about a song by a particular artist
 
     Args:
         spotify (sp.Spotify): the link to the Spotify API
