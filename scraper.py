@@ -108,6 +108,7 @@ def getLyricsWebScrape(artist: str, track: str) -> str:
     elif lyrics1 == lyrics2 == None:
         print("Failed to get lyrics with the artist input: \"" + str(artist) + "\" and the song input: \"" + str(track) + "\"")
         lyrics = None
+        return lyrics
     return lyrics.replace("\n", "\\n")  # fix the lyrics so that there are all on one line
 
 def formatWord(input: str, spaceInterior: bool) -> str:
@@ -151,13 +152,24 @@ def bruteForceGetLyrics(artist: str, track: str) -> str:
     """
     
     # do some string formatting for genius. Try until you get it
-    lyrics = getLyricsWebScrape(formatWord(artist, True), formatWord(track, False))
+    artistTrue = formatWord(artist, True)
+    trackFalse = formatWord(track, False)
+    artistFalse = formatWord(artist, False)
+    trackTrue = formatWord(track, True)
+
+    differentArtist = artistTrue != artistFalse
+    differentTrack = trackFalse != trackTrue
+
+    lyrics = getLyricsWebScrape(artistTrue, trackFalse)
     if lyrics == None:
-        lyrics = getLyricsWebScrape(formatWord(artist, True), formatWord(track, True))
+        if differentTrack:
+            lyrics = getLyricsWebScrape(artistTrue, trackTrue)
         if lyrics == None:
-            lyrics = getLyricsWebScrape(formatWord(artist, False), formatWord(track, False))
+            if differentArtist:
+                lyrics = getLyricsWebScrape(artistFalse, trackFalse)
             if lyrics == None:
-                lyrics = getLyricsWebScrape(formatWord(artist, False), formatWord(track, True))
+                if differentArtist and differentTrack:
+                    lyrics = getLyricsWebScrape(artistFalse, trackTrue)
     return lyrics
 
 def dfToCsv(df: pd.DataFrame, filename: str) -> None:
