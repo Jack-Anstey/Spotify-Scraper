@@ -150,10 +150,14 @@ def bruteForceGetLyrics(artist: str, track: str) -> str:
         str: the lyrics if found, None otherwise
     """
     
-    # do some string formatting for genius
+    # do some string formatting for genius. Try until you get it
     lyrics = getLyricsWebScrape(formatWord(artist, True), formatWord(track, False))
     if lyrics == None:
         lyrics = getLyricsWebScrape(formatWord(artist, True), formatWord(track, True))
+        if lyrics == None:
+            lyrics = getLyricsWebScrape(formatWord(artist, False), formatWord(track, False))
+            if lyrics == None:
+                lyrics = getLyricsWebScrape(formatWord(artist, False), formatWord(track, True))
     return lyrics
 
 def dfToCsv(df: pd.DataFrame, filename: str) -> None:
@@ -218,7 +222,9 @@ def generateOutput(input: pd.DataFrame, spotify: sp.Spotify, chunksize=2000, ite
 
         # get the lyrics
         features['lyrics'] = bruteForceGetLyrics(artist, track)
-        if features['lyrics'] == None:  # if we didn't get the lyrics, try again with the spotify names
+
+        # if we didn't get the lyrics, try again with the spotify names (assuming the names were were found through spotify)
+        if features['lyrics'] == None and artist != features['artist'] and track != features['song']:
             features['lyrics'] = bruteForceGetLyrics(features['artist'], features['song'])
 
         # add to the dataframe if smaller than chunksize, print to csv and reset index otherwise
