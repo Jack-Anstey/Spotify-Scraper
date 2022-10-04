@@ -79,25 +79,16 @@ def getAudioFeatures(spotify: sp.Spotify, trackID: str) -> dict:
         return None
 
 
-def getLyrics(artist: str, track: str) -> str:
+def getLyricsWebScrape(artist: str, track: str) -> str:
     """Scrape the lyrics from Genius, using the input to generate a webpage
 
     Args:
-        artist (str): the artist name
-        track (str): the song name
+        artist (str): the formatted artist name
+        track (str): the formatted song name
 
     Returns:
         str: the lyrics of the song if found, None if it wasn't
     """
-
-    # do some string formatting for genius
-    artist = artist.translate(artist.maketrans("", "", "',.\"&+':()^#@_{=}|\\`~/<>;*?"))  # remove most puncuation
-    artist = str(artist.replace(' ','-')) if ' ' in artist else str(artist)  # replace spaces with dashes
-    artist = artist.replace("$", "-").replace("!", "-").replace("--", "-")  # replace with a dash instead of nothing
-   
-    track = track.translate(track.maketrans("", "", "',.\"&+':()^#@_{=}|\\`~/<>;*?"))  # remove most puncuation
-    track = str(track.replace(' ','-')) if ' ' in track else str(track)  # replace spaces with dashes
-    track = track.replace("$", "-").replace("!", "-").replace("--", "-")  # replace with a dash instead of nothing
 
     # build the page
     page = requests.get('https://genius.com/'+ artist + '-' + track + '-' + 'lyrics')
@@ -117,6 +108,51 @@ def getLyrics(artist: str, track: str) -> str:
     elif lyrics1 == lyrics2 == None:
         print("Failed to get lyrics with the artist input: \"" + str(artist) + "\" and the song input: \"" + str(track) + "\"")
         lyrics = None
+    return lyrics.replace("\n", "\\n")  # fix the lyrics so that there are all on one line
+
+def formatWord(input: str, spaceInterior: bool) -> str:
+    """Take a input and output a formatted word for Genius
+
+    Args:
+        input (str): The string input
+        spaceInterior (bool): True if you want punctuation inside a word to be a space, 
+                                False otherwise
+
+
+    Returns:
+        str: the formatted output
+    """
+
+    if spaceInterior:
+        fixedArtistWords = []
+        for word in input.split():  # iterate through the words in the input
+            if (len(word) == 1):  # if the length of the word is only 1 character, only test that character
+                fixedArtistWords.append(word.translate(str.maketrans('', '', string.punctuation)))
+            else:  # otherwise see if the first and last character is punctuation. If so, delete
+                fixedArtistWords.append(word[0].translate(str.maketrans('', '', string.punctuation)) + word[1:len(word)-1] + word[len(word)-1].translate(str.maketrans('', '', string.punctuation)))
+
+        output = ' '.join(fixedArtistWords).replace("  ", " ")  #  make the edited array back into one string
+        output = output.translate(str.maketrans(string.punctuation, '-'*len(string.punctuation)))  # any remaining puncuation then turns into a dash
+    else:
+        output = input.translate(str.maketrans('', '', string.punctuation))
+
+    output = output.replace(" ", "-").replace("--", "-")  # replace any double dashes with a single dash
+    return output
+
+def bruteForceGetLyrics(artist: str, track: str) -> str:
+    """Repeatedly try to get the lyrics using different string formatting techniques for Genius
+
+    Args:
+        artist (str): the original artist string
+        track (str): the original track string
+
+    Returns:
+        str: the lyrics if found, None otherwise
+    """
+    # do some string formatting for genius
+    lyrics = getLyricsWebScrape(formatWord(artist, True), formatWord(track, False))
+    if lyrics == None:
+        lyrics = getLyricsWebScrape(formatWord(artist, True), formatWord(track, True))
     return lyrics
 
 def dfToCsv(df: pd.DataFrame, filename: str) -> None:
@@ -129,111 +165,62 @@ def dfToCsv(df: pd.DataFrame, filename: str) -> None:
 
     df.to_csv(filename, index=False)
 
-def generateOutput(csvName: str, spotify: sp.Spotify, chunksize: int) -> None:
+def getSongData(spotify: sp.Spotify, artist: str, track: str) -> dict():
+    """Find out data bout 
+
+    Args:
+        spotify (sp.Spotify): the link to the Spotify API
+        artist (str): the artist name
+        track (str): the song that you want more information about
+
+    Returns:
+        dict(): Return a dictionary of the found information, a dict with only the input otherwise
+    """
+
+    foundFeatures = dict()
+    trackFeatures = getTrackFeatures(spotify, artist, track)
+    if trackFeatures != None:
+        foundFeatures.update(trackFeatures)  # add to the dictionary
+        audioFeatures = getAudioFeatures(spotify, foundFeatures['track_id'])
+        if audioFeatures != None:
+            foundFeatures.update(audioFeatures)  # add more
+    else:  # if we couldn't find anything, put the default artist and song into the features dictionary
+        foundFeatures.update({'artist': artist, 'song': track})
+
+    return foundFeatures
+
+def generateOutput(input: pd.DataFrame, spotify: sp.Spotify, chunksize=2000, iteration=0) -> None:
     """Take the songs and artist pairs that you want more information on, and find the information! Outputs to a csv intermittently. 
 
     Args:
-        csvName (str): the name of the csv that you are getting the song and artist names from
+        input (pd.DataFrame): the dataframe that has song and artist columns
         spotify (sp.Spotify): the Spotify object that interfaces with the Spotify API
-        chunksize (int): the size of the csv chunks that you want
+        chunksize (int): the size of the csv chunks that you want (defaults to 2000)
+        iteration (int): the number of iteration that you are on (defaults to 0)
     """
 
     # construct a dataframe with all the columns we'll ever need
     results = pd.DataFrame(columns=['song', 'artist', 'features', 'track_id', 'popularity', 'release_date', 'release_date_precision', 'danceability', 'energy', 'key', 'loudness',
     'mode', 'speechiness', 'acousticness', 'instrumentalness', 'liveness', 'valence', 'tempo', 'time_signature', 'duration_ms', 'lyrics'])
 
-    input = pd.read_csv(csvName)  # get the (song, artist) tuples to use as input for getting more data
     count = 0  # keeps track of how many songs you have looked at in this chunk
-    iteration = 0  # keeps track of how many chunks you have made
+
+    input = input[iteration*chunksize:].reset_index(drop=True)  # resize the input given the current iteration
 
     for tuple in input.itertuples():
         features = dict()  # make an empty dictionary
         artist = tuple[2]
         track = tuple[1]
 
-        trackFeatures = getTrackFeatures(spotify, artist, track)
-        if trackFeatures != None:
-            features.update(trackFeatures)  # add to the dictionary
-            audioFeatures = getAudioFeatures(spotify, features['track_id'])
-            if audioFeatures != None:
-                features.update(audioFeatures)  # add more
-        else:  # if we couldn't find anything, put the default artist and song into the features dictionary
-            features.update({'artist': artist, 'song': track})
+        # get data from Spotify about the song
+        features.update(getSongData(spotify, artist, track))
 
         # get the lyrics
-        lyrics = getLyrics(artist, track)
-        if lyrics != None:  # we got the lyrics!
-            lyricsFixed = lyrics.replace("\n", "\\n")
-            features['lyrics'] = lyricsFixed
-        else:  # if we didn't get the lyrics, try again with the spotify names
-            lyrics = getLyrics(features['artist'], features['song'])
-            if lyrics != None:
-                lyricsFixed = lyrics.replace("\n", "\\n")
-                features['lyrics'] = lyricsFixed
+        features['lyrics'] = bruteForceGetLyrics(artist, track)
+        if features['lyrics'] == None:  # if we didn't get the lyrics, try again with the spotify names
+            features['lyrics'] = bruteForceGetLyrics(features['artist'], features['song'])
 
-        if count < chunksize:
-            # add to the dataframe
-            results = results.append(pd.Series(features), ignore_index=True)
-            count += 1
-        else:
-            count = 0
-            dfToCsv(results, "output"+str(iteration)+".csv")
-            # get an empty dataframe
-            results = pd.DataFrame(columns=['song', 'artist', 'features', 'track_id', 'popularity', 'release_date', 'release_date_precision', 'danceability', 'energy', 'key', 'loudness',
-                'mode', 'speechiness', 'acousticness', 'instrumentalness', 'liveness', 'valence', 'tempo', 'time_signature', 'duration_ms', 'lyrics'])
-            iteration += 1
-
-    # output the remaining/finished dataframe to output.csv
-    if iteration == 0:
-        dfToCsv(results, "output.csv")
-    else:
-        dfToCsv(results, "output"+str(iteration)+".csv")
-
-
-
-def generateOutputOffset(csvName: str, spotify: sp.Spotify, chunksize: int, iteration: int) -> None:
-    """Take the songs and artist pairs that you want more information on, and find the information! Outputs to a csv intermittently. 
-
-    Args:
-        csvName (str): the name of the csv that you are getting the song and artist names from
-        spotify (sp.Spotify): the Spotify object that interfaces with the Spotify API
-        chunksize (int): the size of the csv chunks that you want
-        iteration (int): how many chunks you got done the previous run (assumes you keep chunksize constant between runs)
-    """
-
-    # construct a dataframe with all the columns we'll ever need
-    results = pd.DataFrame(columns=['song', 'artist', 'features', 'track_id', 'popularity', 'release_date', 'release_date_precision', 'danceability', 'energy', 'key', 'loudness',
-    'mode', 'speechiness', 'acousticness', 'instrumentalness', 'liveness', 'valence', 'tempo', 'time_signature', 'duration_ms', 'lyrics'])
-
-    input = pd.read_csv(csvName)  # get the (song, artist) tuples to use as input for getting more data
-    input = input[iteration*chunksize:].reset_index(drop=True)  # start at the offset index
-    count = 0  # keeps track of how many songs you have looked at in this chunk
-
-    for tuple in input.itertuples():
-        features = dict()  # make an empty dictionary
-        artist = tuple[2]
-        track = tuple[1]
-
-        trackFeatures = getTrackFeatures(spotify, artist, track)
-        if trackFeatures != None:
-            features.update(trackFeatures)  # add to the dictionary
-            audioFeatures = getAudioFeatures(spotify, features['track_id'])
-            if audioFeatures != None:
-                features.update(audioFeatures)  # add more
-        else:  # if we couldn't find anything, put the default artist and song into the features dictionary
-            features.update({'artist': artist, 'song': track})
-
-        # get the lyrics
-        lyrics = getLyrics(artist, track)
-        if lyrics != None:  # we got the lyrics!
-            lyricsFixed = lyrics.replace("\n", "\\n")
-            features['lyrics'] = lyricsFixed
-        else:  # if we didn't get the lyrics, try again with the spotify names
-            lyrics = getLyrics(features['artist'], features['song'])
-            if lyrics != None:
-                lyricsFixed = lyrics.replace("\n", "\\n")
-                features['lyrics'] = lyricsFixed
-
+        # add to the dataframe if smaller than chunksize, print to csv and reset index otherwise
         if count < chunksize:
             # add to the dataframe
             results = results.append(pd.Series(features), ignore_index=True)
@@ -256,9 +243,8 @@ def main():
     auth_manager = SpotifyClientCredentials(client_id=secrets.SPOTIPY_CLIENT_ID, client_secret=secrets.SPOTIPY_CLIENT_SECRET)
     spotify = sp.Spotify(auth_manager=auth_manager)
     
-    generateOutput('input.csv', spotify, 3000)  # use a default chunksize of 3000
-
-    # generateOutputOffset('input.csv', spotify, 3000, 3)  # incorporate an offset
+    input = pd.read_csv('input.csv')  # get the (song, artist) tuples to use as input for getting more data
+    generateOutput(input, spotify)
 
 if __name__ == "__main__":
     main()
