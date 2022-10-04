@@ -19,10 +19,6 @@ def getTrackFeatures(spotify: sp.Spotify, artist: str, track: str) -> dict:
         dict: A dictionary of the results, None if nothing was found
     """
 
-    # remove apostrophies since that's the only thing that breaks stuff aparently
-    track = track.replace("'", "")
-    artist = artist.replace("'", "")
-
     q = "track:%s artist:%s" % (track, artist)  # make the query
     
     success = False  # keep trying if you timeout
@@ -195,7 +191,11 @@ def getSongData(spotify: sp.Spotify, artist: str, track: str) -> dict():
     """
 
     foundFeatures = dict()
-    trackFeatures = getTrackFeatures(spotify, artist, track)
+    trackFeatures = getTrackFeatures(spotify, artist.replace("'", ""), track.replace("'", ""))
+    if trackFeatures == None:
+        trackFeatures = getTrackFeatures(spotify, artist, track)  # try it without deleting apostrophies
+    
+    # check to see if either version worked
     if trackFeatures != None:
         foundFeatures.update(trackFeatures)  # add to the dictionary
         audioFeatures = getAudioFeatures(spotify, foundFeatures['track_id'])
