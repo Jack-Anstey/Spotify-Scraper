@@ -230,10 +230,10 @@ def generateOutput(input: pd.DataFrame, spotify: sp.Spotify, chunksize=2000, ite
         track = tuple[1]
 
         # get data from Spotify about the song
-        features.update(getSongData(spotify, artist, track))
+        features.update(getSongData(spotify, str(artist), str(track)))
 
         # get the lyrics
-        features['lyrics'] = bruteForceGetLyrics(artist, track)
+        features['lyrics'] = bruteForceGetLyrics(str(artist), str(track))
 
         # if we didn't get the lyrics, try again with the spotify names (assuming the names were were found through spotify)
         if features['lyrics'] == None and artist != features['artist'] and track != features['song']:
@@ -263,7 +263,7 @@ def main():
     spotify = sp.Spotify(auth_manager=auth_manager)
     
     input = pd.read_csv('input.csv')  # get the (song, artist) tuples to use as input for getting more data
-    generateOutput(input, spotify)
+    generateOutput(input, spotify, iteration=5)
 
 if __name__ == "__main__":
     main()
