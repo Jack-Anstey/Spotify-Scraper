@@ -263,7 +263,7 @@ def main():
     spotify = sp.Spotify(auth_manager=auth_manager)
     
     input = pd.read_csv('input.csv')  # get the (song, artist) tuples to use as input for getting more data
-    generateOutput(input, spotify, iteration=5)
+    generateOutput(input, spotify, iteration=10)
 
 if __name__ == "__main__":
     main()
