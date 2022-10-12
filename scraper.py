@@ -181,7 +181,7 @@ def dfToCsv(df: pd.DataFrame, filename: str) -> None:
     df.to_csv(filename, index=False)
 
 
-def coalesce():
+def coalesce() -> None:
     """Takes all of the generated numbered output csv's and coalesces them all into one
     """
 
@@ -202,7 +202,7 @@ def coalesce():
     
     dfToCsv(output, "output.csv")  # the final output
 
-def getSongData(spotify: sp.Spotify, artist: str, track: str) -> dict():
+def getSongData(spotify: sp.Spotify, artist: str, track: str) -> dict:
     """Find out data about a song by a particular artist
 
     Args:
