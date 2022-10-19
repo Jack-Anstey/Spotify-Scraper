@@ -1,6 +1,6 @@
 # Spotify Scraper
 
-This program takes an input of songs and artists and returns tons of interesting statistics about them, including the number of streams the song has on Spotify and its lyrics.
+This program takes an input of songs and artists and returns tons of interesting statistics about them and its lyrics.
 
 ## How This Works
 
