@@ -27,7 +27,7 @@ def getTrackFeatures(spotify: sp.Spotify, artist: str, track: str) -> dict:
     while(not success):
         try:
             # Set the limit to 2. Why? Ask Spotify. Returns more consistent results
-            result = spotify.search(q, limit=1, offset=0, type='track', market='US')  # use the query
+            result = spotify.search(q, limit=2, offset=0, type='track', market='US')  # use the query
             totalArtists = len(result['tracks']['items'][0]['artists'])
             featuredArtists = ""
             for features in range(1, totalArtists):
